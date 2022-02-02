@@ -4,7 +4,7 @@ This library does **not** parse metadata. This library takes parsed OData metada
 If you need to parse metadata you can use [Olingo(ts-odatajs)](https://www.npmjs.com/package/ts-odatajs) or [JayData(@odata/metadata)](https://www.npmjs.com/package/@odata/metadata). You don't need a parser to use this library. As long as you pass it an object that implements the `ODataMetadata` interface.
 
 ## Why a Metadata Processor
-OData metadata is great. It can easily give root entity names, property names, property types, reltionships, and more. The downside is that the metadata is self referential. Everytime you need to the definition of an entity you have to search the entire document again. 
+OData metadata is great. It can easily give root entity names, property names, property types, reltionships, and more. The downside is that the metadata is self referential. Everytime you need to look up the definition of an entity you have to search the entire document again. 
 
 For example:
 ```xml
@@ -51,7 +51,7 @@ const metadata; //your metadata object, json, whatever
 const flattened = flattenTypes(metadata);
 ```
 
-At this point you have a flat area of every Entity Type defined extended with a `fullName` property that includes the namespace. Using the metadata EDMX above:
+At this point you have a flat array of every Entity Type defined extended with a `fullName` property that includes the namespace. Using the metadata EDMX above:
 ```js
 const flattened = flattenTypes(metadata);
 // would look like this
@@ -91,7 +91,7 @@ const flattened = flattenTypes(metadata);
 
 This can be easily filtered and checked for a specific type. Except we still have the self reference problem. 
 
-Finally we can processor a specific type and build a tree from that root.
+Finally we can process a specific type and build a tree from that root.
 ```js
 import { buildTypeRoot, flattenTypes } from 'odata-metadata-processor';
 
@@ -118,9 +118,9 @@ The root takes the fully qualified name and returns the entire tree to the Nth r
         key: [Object],
         property: [
         {
-            name: 'CustomerID',
-            type: 'Edm.String',
-            pathName: 'Orders.CustomerID'
+            name: 'OrderID',
+            type: 'Edm.Int32',
+            pathName: 'Orders.OrderID'
         },
         ],
         navigationProperty: [],
@@ -135,6 +135,6 @@ The root takes the fully qualified name and returns the entire tree to the Nth r
 Now `Customers` has the full entity under the navigation property that matches the type. In addition to this each property has a `pathName` that gives the full path from the root which can be used to access that property when needed.
 
 ## Typescript Types
-The interfaces used only specify what properties are required to process the metadata. The types follow what is specified in [OData 4.0 CSDL spec](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html#_Toc38530382). Each interface allows for any other field to be present and used without causing type problems.
+The interfaces used only specify what properties are required to process the metadata. The types follow what is specified in [OData 4.0 CSDL spec](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html). Each interface allows for any other field to be present and used without causing type problems.
 
 The returned types include every field that was present in the original object in addition to the extended fields.
