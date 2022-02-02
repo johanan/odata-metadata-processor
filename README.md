@@ -97,7 +97,7 @@ import { buildTypeRoot, flattenTypes } from 'odata-metadata-processor';
 
 const metadata; //your metadata object, json, whatever
 const flattened = flattenTypes(metadata);
-const root = buildTypeRoot(flat)('odata4.namespace.Customers');
+const root = buildTypeRoot(flattened)('odata4.namespace.Customers');
 ```
 
 The root takes the fully qualified name and returns the entire tree to the Nth recursion. In our example above.
