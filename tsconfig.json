@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+      "esModuleInterop": true,
+      "isolatedModules": true,
+      "lib": ["ESNext", "dom"],
+      "target": "es5",
+      "declaration": true,
+      "emitDeclarationOnly": false,
+      "noImplicitAny": false,
+      "noEmit": false,
+      "strict": true,
+      "outDir": "dist",
+    },
+    "include": ["index.ts"],
+    "exclude": ["dist", "node_modules"]
+  }

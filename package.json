@@ -1,0 +1,25 @@
+{
+  "name": "odata-metadata-processor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "jest"
+  },
+  "repository": "https://github.com/johanan/odata-metadata-processor",
+  "author": "Joshua Johanan",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^27.4.0",
+    "jest": "^27.4.7",
+    "ts-jest": "^27.1.3",
+    "ts-odatajs": "^4.0.8",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "ramda": "^0.26.0"
+  }
+}
