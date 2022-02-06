@@ -1,0 +1,35 @@
+name: OData Metadata Processor
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'next'
+    pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - run: npm ci
+      - run: npm test
+
+  publish-npm:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          registry-url: https://registry.npmjs.org/
+      - run: npm ci
+      - run: npm run build
+      - run: npx semantic-release@17
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+          GH_TOKEN: ${{secrets.GH_TOKEN}}

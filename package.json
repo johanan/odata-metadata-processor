@@ -12,6 +12,19 @@
   "repository": "https://github.com/johanan/odata-metadata-processor",
   "author": "Joshua Johanan",
   "license": "MIT",
+  "files": [
+    "dist",
+    "index.ts",
+    "README.md",
+    "package.json",
+    "package-lock.json"
+  ],
+  "release": {
+    "branches": [
+      "main",
+      "next"
+    ]
+  },
   "devDependencies": {
     "@types/jest": "^27.4.0",
     "jest": "^27.4.7",
@@ -21,5 +34,12 @@
   },
   "dependencies": {
     "ramda": "^0.26.0"
-  }
+  },
+  "keywords": [
+    "odata",
+    "metadata",
+    "processing",
+    "functional",
+    "ramda"
+  ]
 }
