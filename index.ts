@@ -1,4 +1,4 @@
-import { append, compose, filter, find, flatten, has, includes, isEmpty, isNil, lensProp, map, mergeAll, mergeRight, over, prop, propEq, set } from 'ramda';
+import { append, compose, filter, find, flatten, has, includes, isEmpty, isNil, lensProp, map, mergeAll, mergeRight, prop, propEq, set } from 'ramda';
 
 export interface ProcessedProperty
 extends ODataProperty {
@@ -11,7 +11,7 @@ extends ODataEntityType {
 }
 
 export interface ProcessedEntityType 
-extends Pick<FullNameEntityType, "fullName" | "name" > {
+extends Pick<ODataEntityType, "name" > {
   property: ProcessedProperty[];
   navigationProperty: ProcessedEntityType[];
   [x: string | number | symbol]: unknown;
@@ -62,6 +62,26 @@ export interface ODataMetadata {
 const emptyArray = <A, >(list?: A[]) : A[] => isEmpty(list) || isNil(list) ? [] : list;
 const addFullNamespace = map(n => map(e => mergeRight(e, {fullName: `${n.namespace}.${e.name}`}), prop('entityType', n)));
 
+export const namespaceSplit = (fullName: string) => {
+  const last = fullName.lastIndexOf('.');
+  const namespace = fullName.substring(0, last);
+  const name = fullName.substring(last + 1);
+  return { namespace, name};
+}
+
+export const findType = (metadata: ODataMetadata) => (fullName: string) => {
+  const split = namespaceSplit(fullName);
+
+  return compose(
+    find(propEq('name', split.name)),
+    flatten,
+    map(prop('entityType')),
+    filter(propEq('namespace', split.namespace)),
+    prop('schema'),
+    prop('dataServices')
+    )(metadata);
+}
+
 export const flattenTypes = (metadata: ODataMetadata) : FullNameEntityType[] => compose(
     flatten,
     addFullNamespace,
@@ -71,11 +91,11 @@ export const flattenTypes = (metadata: ODataMetadata) : FullNameEntityType[] => 
     prop('dataServices')
   )(metadata);
 
-export const buildTypeRoot = (flattenedTypes : FullNameEntityType[]) => (fullName: string, prefix = '', parents = []) : ProcessedEntityType => {
+export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, prefix = '', parents = []) : ProcessedEntityType => {
   const collectionRegex = /(collection\()(.*)(\))/i;
-  const nameLens = lensProp<any>('name');
   const navPropLens = lensProp<any>('navigationProperty');
-  const entity : FullNameEntityType = find(propEq('fullName', fullName), flattenedTypes);
+  const search = findType(metadata);
+  const entity : ODataEntityType = search(fullName);
 
   //parse navigations
   const navProps = emptyArray(entity.navigationProperty)
@@ -87,10 +107,10 @@ export const buildTypeRoot = (flattenedTypes : FullNameEntityType[]) => (fullNam
     .map(n => {
       const newName = `${prefix}${n.name}.`;
       const type = n.type.replace(collectionRegex, '$2');
-      const navProp = find(propEq('fullName', type), flattenedTypes);
+      const navProp = search(type);
       const property = navProp.property.map(prop => mergeAll([prop, { pathName: `${newName}${prop.name}`}]) );
       //recurse here
-      const transformed = buildTypeRoot(flattenedTypes)(type, newName, append(fullName, parents));
+      const transformed = buildTypeRoot(metadata)(type, newName, append(fullName, parents));
 
       return mergeAll([transformed, n, { property }]);
     });

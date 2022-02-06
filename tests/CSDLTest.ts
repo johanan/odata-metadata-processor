@@ -1,4 +1,4 @@
-import { buildTypeRoot, flattenTypes } from '../index';
+import { findType, buildTypeRoot, flattenTypes } from '../index';
 import { oData } from "ts-odatajs";
 
 //found in MuleSoft documentation for OData
@@ -48,17 +48,24 @@ const csdl = `<?xml version="1.0" encoding="UTF-8"?>
 const metadata : any = oData.parseMetadata(csdl);
 
 describe('CSDL Processing', () => {
-    it('should flatten all the types', () => {
-        const flat = flattenTypes(metadata);
-        expect(flat.length).toBe(2);
-        expect(flat[0].fullName).toBe('odata4.namespace.Customers')
-        expect(flat[1].fullName).toBe('odata4.namespace.Orders')
-    })
+  it('should test', () => {
+    const customers = findType(metadata)('odata4.namespace.Customers');
+    
+    expect(customers.name).toBe('Customers');
+  })
+  
+  it('should flatten all the types', () => {
+      const flat = flattenTypes(metadata);
 
-    it('should process the tree from Customers', () => {
-        const flat = flattenTypes(metadata);
-        const root = buildTypeRoot(flat)('odata4.namespace.Customers');
-        expect(root.fullName).toBe('odata4.namespace.Customers');
-        expect(root.navigationProperty[0].fullName).toBe('odata4.namespace.Orders');
-    })
+      expect(flat.length).toBe(2);
+      expect(flat[0].fullName).toBe('odata4.namespace.Customers')
+      expect(flat[1].fullName).toBe('odata4.namespace.Orders')
+  })
+
+  it('should process the tree from Customers', () => {
+      const root = buildTypeRoot(metadata)('odata4.namespace.Customers');
+
+      expect(root.name).toBe('Customers');
+      expect(root.navigationProperty[0].name).toBe('Orders');
+  })
 })

@@ -22,18 +22,17 @@ describe('Schema JSON Processing', () => {
 
     it('should process the tree from each root', () => {
         const flat = flattenTypes(schema);
-        const root = buildTypeRoot(flat)('JayData.Test.CommonItems.Entities.User');
-
-        expect(root.fullName).toBe('JayData.Test.CommonItems.Entities.User');
+        const root = buildTypeRoot(schema)('JayData.Test.CommonItems.Entities.User');
+        expect(root.name).toBe('User');
         var article = root.navigationProperty[0];
-        expect(article.fullName).toBe('JayData.Test.CommonItems.Entities.Article');
+        console.log(article)
+        expect(article.name).toBe('ReviewedArticles');
         //props
         expect(article.property.length).toBe(8);
         expect(article.property[0].pathName).toBe('ReviewedArticles.RowVersion');
         //navprops
         expect(article.navigationProperty.length).toBe(2);
-        expect(article.navigationProperty[0].fullName);
-        expect(article.navigationProperty[0].fullName).toBe('JayData.Test.CommonItems.Entities.Category');
+        expect(article.navigationProperty[0].name).toBe('Category');
         expect(article.navigationProperty[0].property[0].pathName).toBe('ReviewedArticles.Category.RowVersion');
     })
 })
