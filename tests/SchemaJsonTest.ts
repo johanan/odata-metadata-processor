@@ -25,7 +25,7 @@ describe('Schema JSON Processing', () => {
         const root = buildTypeRoot(schema)('JayData.Test.CommonItems.Entities.User');
         expect(root.name).toBe('User');
         var article = root.navigationProperty[0];
-        console.log(article)
+
         expect(article.name).toBe('ReviewedArticles');
         //props
         expect(article.property.length).toBe(8);
