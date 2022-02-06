@@ -59,7 +59,7 @@ export interface ODataMetadata {
 }
 
 //@ts-ignore
-const emptyArray = <A, >(list?: A[]) : A[] => isEmpty(list) || isNil(list) ? [] : list;
+const emptyArray = <A, >(list?: A[]) : A[] => isNil(list) ? [] : list;
 const addFullNamespace = map(n => map(e => mergeRight(e, {fullName: `${n.namespace}.${e.name}`}), prop('entityType', n)));
 
 export const namespaceSplit = (fullName: string) => {
@@ -69,7 +69,7 @@ export const namespaceSplit = (fullName: string) => {
   return { namespace, name};
 }
 
-export const findType = (metadata: ODataMetadata) => (fullName: string) => {
+export const findType = (metadata: ODataMetadata) => (fullName: string) : ODataEntityType | undefined => {
   const split = namespaceSplit(fullName);
 
   return compose(
@@ -95,10 +95,10 @@ export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, pre
   const collectionRegex = /(collection\()(.*)(\))/i;
   const navPropLens = lensProp<any>('navigationProperty');
   const search = findType(metadata);
-  const entity : ODataEntityType = search(fullName);
+  const entity : ODataEntityType | undefined = search(fullName);
 
   //parse navigations
-  const navProps = emptyArray(entity.navigationProperty)
+  const navProps = emptyArray(entity?.navigationProperty)
     .filter(n  => {
       const type = n.type.replace(collectionRegex, '$2');
       //remove circular references
@@ -108,7 +108,7 @@ export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, pre
       const newName = `${prefix}${n.name}.`;
       const type = n.type.replace(collectionRegex, '$2');
       const navProp = search(type);
-      const property = navProp.property.map(prop => mergeAll([prop, { pathName: `${newName}${prop.name}`}]) );
+      const property = emptyArray(navProp?.property).map(prop => mergeAll([prop, { pathName: `${newName}${prop.name}`}]) );
       //recurse here
       const transformed = buildTypeRoot(metadata)(type, newName, append(fullName, parents));
 
@@ -117,7 +117,7 @@ export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, pre
 
   return mergeAll([ set(navPropLens, navProps, entity),
     {
-      property: emptyArray(entity.property).map(prop => mergeAll([prop, { pathName: prop.name}]) )
+      property: emptyArray(entity?.property).map(prop => mergeAll([prop, { pathName: prop.name}]) )
     }, 
   ]);
 }

@@ -43,16 +43,75 @@ That is where `odata-metadata-processor` comes in.
 ## QuickStart/How to Use
 You first need a metadata object. This can be parsed from the endpoint, a JSON document, or any object that implements the `ODataMetadata` interface. 
 
-Next we need to flatten and extend the Entity Types. 
+We can process a specific type and build a tree from that root.
+```js
+import { buildTypeRoot } from 'odata-metadata-processor';
+
+const metadata; //your metadata object, json, whatever
+const root = buildTypeRoot(metadata)('odata4.namespace.Customers');
+``` 
+
+The root takes the metadata and the fully qualified name and returns the entire tree to the Nth recursion. In our example above.
+```js
+{
+    name: 'Customers',
+    key: { propertyRef: [ [Object] ] },
+    property: [
+        {
+        name: 'CustomerID',
+        type: 'Edm.String',
+        pathName: 'CustomerID'
+        }
+    ],
+    navigationProperty: [
+        {
+        name: 'Orders',
+        key: [Object],
+        property: [
+        {
+            name: 'OrderID',
+            type: 'Edm.Int32',
+            pathName: 'Orders.OrderID'
+        },
+        ],
+        navigationProperty: [],
+        type: 'Collection(odata4.namespace.Orders)'
+        }
+    ],
+}
+```
+
+Now `Customers` has the full entity under the navigation property that matches the type. In addition to this each property has a `pathName` that gives the full path from the root which can be used to access that property when needed.
+
+`buildTypeRoot` is a function that returns a function that takes the full name of the type. This allows you to *bind* the search function to a metadata. This can be passed around used to build other types from the same metadata.
+
+In our example above you could bind the metadata and then build from `odata4.namespace.Orders` which would have `Customers` as a child.
+
+## findType
+`findType` is the helper method that does all the searching. In the same way `buildTypeRoot` binds the metadata, `findType` does the same. First pass in the metadata and you will get back a function to search for the fully qualified name in the metadata.
+
+```js
+import { findType } from 'odata-metadata-processor';
+
+const customers = findType(metadata)('odata4.namespace.Customers');
+//returns the Entity Type or undefined
+```
+
+`buildTypeRoot` uses this function to find each navigation property and merge it into the object structure.
+
+## Typescript Types
+The interfaces used only specify what properties are required to process the metadata. The types follow what is specified in [OData 4.0 CSDL spec](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html). Each interface allows for any other field to be present and used without causing type problems.
+
+The returned types are extensions of the objects passed in. The properties of the original object are kept and new properties are added to extend functionality.
+
+## Flattened Namespaces
+The `flattenTypes` takes all the types across all Namespaces and returns it as an array of all the types. When doing this you lose access to the namespace, so we add that back in as `fullName`.
+
+Using the above EDMX, here is what flattened types would look like:
 ```js
 import {flattenTypes} from 'odata-metadata-processor';
 
 const metadata; //your metadata object, json, whatever
-const flattened = flattenTypes(metadata);
-```
-
-At this point you have a flat array of every Entity Type defined extended with a `fullName` property that includes the namespace. Using the metadata EDMX above:
-```js
 const flattened = flattenTypes(metadata);
 // would look like this
 [
@@ -88,53 +147,3 @@ const flattened = flattenTypes(metadata);
     }
 ]
 ```
-
-This can be easily filtered and checked for a specific type. Except we still have the self reference problem. 
-
-Finally we can process a specific type and build a tree from that root.
-```js
-import { buildTypeRoot, flattenTypes } from 'odata-metadata-processor';
-
-const metadata; //your metadata object, json, whatever
-const flattened = flattenTypes(metadata);
-const root = buildTypeRoot(flattened)('odata4.namespace.Customers');
-```
-
-The root takes the fully qualified name and returns the entire tree to the Nth recursion. In our example above.
-```js
-{
-    name: 'Customers',
-    key: { propertyRef: [ [Object] ] },
-    property: [
-        {
-        name: 'CustomerID',
-        type: 'Edm.String',
-        pathName: 'CustomerID'
-        }
-    ],
-    navigationProperty: [
-        {
-        name: 'Orders',
-        key: [Object],
-        property: [
-        {
-            name: 'OrderID',
-            type: 'Edm.Int32',
-            pathName: 'Orders.OrderID'
-        },
-        ],
-        navigationProperty: [],
-        fullName: 'odata4.namespace.Orders',
-        type: 'Collection(odata4.namespace.Orders)'
-        }
-    ],
-    fullName: 'odata4.namespace.Customers'
-}
-```
-
-Now `Customers` has the full entity under the navigation property that matches the type. In addition to this each property has a `pathName` that gives the full path from the root which can be used to access that property when needed.
-
-## Typescript Types
-The interfaces used only specify what properties are required to process the metadata. The types follow what is specified in [OData 4.0 CSDL spec](https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html). Each interface allows for any other field to be present and used without causing type problems.
-
-The returned types include every field that was present in the original object in addition to the extended fields.

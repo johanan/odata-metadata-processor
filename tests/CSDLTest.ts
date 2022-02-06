@@ -51,7 +51,7 @@ describe('CSDL Processing', () => {
   it('should test', () => {
     const customers = findType(metadata)('odata4.namespace.Customers');
     
-    expect(customers.name).toBe('Customers');
+    expect(customers?.name).toBe('Customers');
   })
   
   it('should flatten all the types', () => {
