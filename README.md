@@ -58,6 +58,7 @@ Using our example above:
 {
     name: 'Customers',
     key: { propertyRef: [ [Object] ] },
+    path: [],
     property: [
         {
         name: 'CustomerID',
@@ -71,6 +72,7 @@ Using our example above:
         isCollection: true,
         name: 'Orders',
         key: [Object],
+        path: ['Orders'],
         property: [
         {
             name: 'OrderID',

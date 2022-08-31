@@ -2,13 +2,13 @@ import { append, compose, filter, find, flatten, has, includes, isEmpty, isNil, 
 
 export interface ProcessedProperty
 extends ODataProperty {
-  pathName: string,
-  path: string[]
+  pathName: string;
+  path: string[];
 }
 
 export interface FullNameEntityType 
 extends ODataEntityType {
-  fullName: string,
+  fullName: string;
 }
 
 export interface ProcessedEntityType 
@@ -16,6 +16,7 @@ extends Pick<ODataEntityType, "name" > {
   property: ProcessedProperty[];
   navigationProperty: ProcessedEntityType[];
   isCollection: boolean;
+  path: string[];
   [x: string | number | symbol]: unknown;
 }
 
@@ -116,12 +117,13 @@ export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, pre
       //recurse here
       const transformed = buildTypeRoot(metadata)(type, newName, append(fullName, parents), newPath);
 
-      return mergeAll([transformed, n, { property, isCollection }]);
+      return mergeAll([transformed, n, { property, isCollection, path: newPath }]);
     });
 
   return mergeAll([ set(navPropLens, navProps, entity),
     {
-      property: emptyArray(entity?.property).map(prop => mergeAll([prop, { pathName: prop.name, path: [prop.name]}]) )
+      property: emptyArray(entity?.property).map(prop => mergeAll([prop, { pathName: prop.name, path: [prop.name]}]) ),
+      path: [],
     }, 
   ]);
 }

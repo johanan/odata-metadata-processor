@@ -23,13 +23,15 @@ describe('Schema JSON Processing', () => {
     it('should process the tree from each root', () => {
         const root = buildTypeRoot(schema)('JayData.Test.CommonItems.Entities.User');
         expect(root.name).toBe('User');
+        expect(root.path).toStrictEqual([]);
         expect(root.property[0].name).toBe('Id');
         expect(root.property[0].pathName).toBe('Id');
         expect(root.property[0].path).toStrictEqual(['Id']);
-        
+
         var article = root.navigationProperty[0];
 
         expect(article.name).toBe('ReviewedArticles');
+        expect(article.path).toStrictEqual(['ReviewedArticles']);
         expect(article.isCollection).toBe(true);
         //props
         expect(article.property.length).toBe(8);
