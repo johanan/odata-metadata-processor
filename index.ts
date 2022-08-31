@@ -1,8 +1,9 @@
-import { append, compose, filter, find, flatten, has, includes, isEmpty, isNil, lensProp, map, mergeAll, mergeRight, prop, propEq, set } from 'ramda';
+import { append, compose, filter, find, flatten, has, includes, isEmpty, isNil, lensProp, map, mergeAll, mergeRight, prop, propEq, set, split } from 'ramda';
 
 export interface ProcessedProperty
 extends ODataProperty {
-  pathName: string
+  pathName: string,
+  path: string[]
 }
 
 export interface FullNameEntityType 
@@ -14,6 +15,7 @@ export interface ProcessedEntityType
 extends Pick<ODataEntityType, "name" > {
   property: ProcessedProperty[];
   navigationProperty: ProcessedEntityType[];
+  isCollection: boolean;
   [x: string | number | symbol]: unknown;
 }
 
@@ -91,7 +93,7 @@ export const flattenTypes = (metadata: ODataMetadata) : FullNameEntityType[] => 
     prop('dataServices')
   )(metadata);
 
-export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, prefix = '', parents = []) : ProcessedEntityType => {
+export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, prefix = '', parents = [], path = [],) : ProcessedEntityType => {
   const collectionRegex = /(collection\()(.*)(\))/i;
   const navPropLens = lensProp<any>('navigationProperty');
   const search = findType(metadata);
@@ -106,18 +108,20 @@ export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, pre
     })
     .map(n => {
       const newName = `${prefix}${n.name}.`;
+      const newPath = append(n.name, path);
       const type = n.type.replace(collectionRegex, '$2');
       const navProp = search(type);
-      const property = emptyArray(navProp?.property).map(prop => mergeAll([prop, { pathName: `${newName}${prop.name}`}]) );
+      const property = emptyArray(navProp?.property).map(prop => mergeAll([prop, { pathName: `${newName}${prop.name}`, path: append(prop.name, newPath)}]) );
+      const isCollection = collectionRegex.test(n.type);
       //recurse here
-      const transformed = buildTypeRoot(metadata)(type, newName, append(fullName, parents));
+      const transformed = buildTypeRoot(metadata)(type, newName, append(fullName, parents), newPath);
 
-      return mergeAll([transformed, n, { property }]);
+      return mergeAll([transformed, n, { property, isCollection }]);
     });
 
   return mergeAll([ set(navPropLens, navProps, entity),
     {
-      property: emptyArray(entity?.property).map(prop => mergeAll([prop, { pathName: prop.name}]) )
+      property: emptyArray(entity?.property).map(prop => mergeAll([prop, { pathName: prop.name, path: [prop.name]}]) )
     }, 
   ]);
 }

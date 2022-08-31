@@ -21,18 +21,35 @@ describe('Schema JSON Processing', () => {
     })
 
     it('should process the tree from each root', () => {
-        const flat = flattenTypes(schema);
         const root = buildTypeRoot(schema)('JayData.Test.CommonItems.Entities.User');
         expect(root.name).toBe('User');
+        expect(root.property[0].name).toBe('Id');
+        expect(root.property[0].pathName).toBe('Id');
+        expect(root.property[0].path).toStrictEqual(['Id']);
+        
         var article = root.navigationProperty[0];
 
         expect(article.name).toBe('ReviewedArticles');
+        expect(article.isCollection).toBe(true);
         //props
         expect(article.property.length).toBe(8);
         expect(article.property[0].pathName).toBe('ReviewedArticles.RowVersion');
+        expect(article.property[0].path).toStrictEqual(['ReviewedArticles', 'RowVersion']);
         //navprops
         expect(article.navigationProperty.length).toBe(2);
         expect(article.navigationProperty[0].name).toBe('Category');
         expect(article.navigationProperty[0].property[0].pathName).toBe('ReviewedArticles.Category.RowVersion');
+        expect(article.navigationProperty[0].property[0].path).toStrictEqual(['ReviewedArticles', 'Category', 'RowVersion']);
+
+        var profile = root.navigationProperty[2];
+
+        expect(profile.name).toBe('Profile');
+        expect(profile.isCollection).toBe(false);
+        //props
+        expect(profile.property.length).toBe(6);
+        expect(profile.property[0].pathName).toBe('Profile.Id');
+        expect(profile.property[0].path).toStrictEqual(['Profile', 'Id']);
+        //navprops
+        expect(profile.navigationProperty.length).toBe(0);
     })
 })

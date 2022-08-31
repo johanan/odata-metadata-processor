@@ -1,7 +1,7 @@
 # OData Metadata Processor
-This library does **not** parse metadata. This library takes parsed OData metadata and moves it around so it is easier to find and work with.
+This library does **not** parse metadata. This library takes parsed OData metadata and turns it into a tree starting from a specific entity.
 
-If you need to parse metadata you can use [Olingo(ts-odatajs)](https://www.npmjs.com/package/ts-odatajs) or [JayData(@odata/metadata)](https://www.npmjs.com/package/@odata/metadata). You don't need a parser to use this library. As long as you pass it an object that implements the `ODataMetadata` interface.
+If you need to parse metadata you can use [Olingo(ts-odatajs)](https://www.npmjs.com/package/ts-odatajs) or [JayData(@odata/metadata)](https://www.npmjs.com/package/@odata/metadata). You don't need a parser to use this library, you just need an object that implements the `ODataMetadata` interface.
 
 ## Why a Metadata Processor
 OData metadata is great. It can easily give root entity names, property names, property types, reltionships, and more. The downside is that the metadata is self referential. Everytime you need to look up the definition of an entity you have to search the entire document again. 
@@ -41,7 +41,7 @@ Further, if we were to `$expand=Orders` in an OData query, to reference properti
 That is where `odata-metadata-processor` comes in.
 
 ## QuickStart/How to Use
-You first need a metadata object. This can be parsed from the endpoint, a JSON document, or any object that implements the `ODataMetadata` interface. 
+You first need a metadata object. This can be parsed from an endpoint, a JSON document, or any object that conforms to the `ODataMetadata` interface. 
 
 We can process a specific type and build a tree from that root.
 ```js
@@ -51,7 +51,9 @@ const metadata; //your metadata object, json, whatever
 const root = buildTypeRoot(metadata)('odata4.namespace.Customers');
 ``` 
 
-The root takes the metadata and the fully qualified name and returns the entire tree to the Nth recursion. In our example above.
+The root takes the metadata and the fully qualified name and returns the entire tree to the leaf nodes.  Any circular references are removed. If a type has already been parsed, it will not parse it again.
+
+Using our example above:
 ```js
 {
     name: 'Customers',
@@ -60,18 +62,21 @@ The root takes the metadata and the fully qualified name and returns the entire 
         {
         name: 'CustomerID',
         type: 'Edm.String',
-        pathName: 'CustomerID'
+        pathName: 'CustomerID',
+        path: ['CustomerID']
         }
     ],
     navigationProperty: [
         {
+        isCollection: true,
         name: 'Orders',
         key: [Object],
         property: [
         {
             name: 'OrderID',
             type: 'Edm.Int32',
-            pathName: 'Orders.OrderID'
+            pathName: 'Orders.OrderID',
+            path: ['Orders', 'OrderID']
         },
         ],
         navigationProperty: [],
@@ -81,9 +86,9 @@ The root takes the metadata and the fully qualified name and returns the entire 
 }
 ```
 
-Now `Customers` has the full entity under the navigation property that matches the type. In addition to this each property has a `pathName` that gives the full path from the root which can be used to access that property when needed.
+Now `Customers` has the full entity under the navigation property that matches the type. In addition to this each property has a `pathName` and `path` that gives the full path as a string and an array respectively, from the root which can be used to access that property when needed.
 
-`buildTypeRoot` is a function that returns a function that takes the full name of the type. This allows you to *bind* the search function to a metadata. This can be passed around used to build other types from the same metadata.
+`buildTypeRoot` is a function that returns a function that takes the full name of the type. This allows you to *bind* the search function to a metadata. This can be passed around and used to build other types from the same metadata.
 
 In our example above you could bind the metadata and then build from `odata4.namespace.Orders` which would have `Customers` as a child.
 
