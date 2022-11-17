@@ -1,10 +1,12 @@
-import { append, compose, filter, find, flatten, has, includes, isEmpty, isNil, lensProp, map, mergeAll, mergeRight, prop, propEq, set, split } from 'ramda';
+import { append, compose, filter, find, flatten, has, includes, isNil, lensProp, map, mergeAll, mergeRight, prop, props, propEq, set, split } from 'ramda';
 
 export interface ProcessedProperty
-extends ODataProperty {
+extends ODataProperty, ProcessedEntityType {
   pathName: string;
-  path: string[];
 }
+
+export interface ProcessedEnumProperty
+extends ODataProperty, ODataEnumType {}
 
 export interface FullNameEntityType 
 extends ODataEntityType {
@@ -13,10 +15,11 @@ extends ODataEntityType {
 
 export interface ProcessedEntityType 
 extends Pick<ODataEntityType, "name" > {
-  property: ProcessedProperty[];
+  property: ProcessedProperty [];
   navigationProperty: ProcessedEntityType[];
   isCollection: boolean;
   path: string[];
+  member: ODataMember[];
   [x: string | number | symbol]: unknown;
 }
 
@@ -45,9 +48,21 @@ export interface ODataEntityType {
   [x: string | number | symbol]: unknown;
 }
 
+export interface ODataMember {
+  name: string;
+  value?: any;
+}
+
+export interface ODataEnumType {
+  name: string;
+  member?: ODataMember[]
+}
+
 export interface ODataNamespace {
   namespace: string;
-  entityType: ODataEntityType[];
+  entityType?: ODataEntityType[];
+  complexType?: ODataEntityType[];
+  enumType?: ODataEnumType[];
   [x: string | number | symbol]: unknown;
 }
 
@@ -72,18 +87,21 @@ export const namespaceSplit = (fullName: string) => {
   return { namespace, name};
 }
 
-export const findType = (metadata: ODataMetadata) => (fullName: string) : ODataEntityType | undefined => {
+export const findAnyType = (metadata: ODataMetadata) => (typesToFind: string[]) => (fullName: string) : any | undefined => {
   const split = namespaceSplit(fullName);
 
   return compose(
     find(propEq('name', split.name)),
     flatten,
-    map(prop('entityType')),
+    map(props(typesToFind)),
     filter(propEq('namespace', split.namespace)),
     prop('schema'),
     prop('dataServices')
     )(metadata);
 }
+
+export const findType = (metadata: ODataMetadata) : (fullName: string) => ODataEntityType | undefined => findAnyType(metadata)(['entityType', 'complexType']) ;
+export const findEnumType = (metadata: ODataMetadata) : (fullName: string) => ODataEnumType | undefined => findAnyType(metadata)(['enumType']);
 
 export const flattenTypes = (metadata: ODataMetadata) : FullNameEntityType[] => compose(
     flatten,
@@ -94,11 +112,47 @@ export const flattenTypes = (metadata: ODataMetadata) : FullNameEntityType[] => 
     prop('dataServices')
   )(metadata);
 
-export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, prefix = '', parents = [], path = [],) : ProcessedEntityType => {
-  const collectionRegex = /(collection\()(.*)(\))/i;
-  const navPropLens = lensProp<any>('navigationProperty');
+const collectionRegex = /(collection\()(.*)(\))/i;
+
+export const buildEnum = (metadata: ODataMetadata) => (fullName: string) : ODataEnumType => {
+  const search = findEnumType(metadata);
+  const entity = search(fullName);
+  // enums do not recurse
+  return mergeAll([{ member: []}, entity ]);
+}
+
+export const buildProperty = (metadata: ODataMetadata) => (fullName: string, prefix = '', parents = [], path = [],) : ProcessedProperty[] => {
   const search = findType(metadata);
-  const entity : ODataEntityType | undefined = search(fullName);
+  const entity = search(fullName);
+
+  const properties = emptyArray(entity?.property)
+  .filter(p => {
+    const type = p.type.replace(collectionRegex, '$2');
+    return !includes(type, parents);
+  })
+  .map(p => {
+    const newPath = append(p.name, path);
+    // always gets set
+    const initProp = mergeAll([p, { pathName: `${prefix}${p.name}`, path: newPath}])
+    const type = p.type.replace(collectionRegex, '$2');
+    const isCollection = collectionRegex.test(p.type);
+
+    // for next step
+    const newName = `${prefix}${p.name}.`;
+    const recursed = buildProperty(metadata)(type, newName, append(fullName, parents), newPath);
+    // check if current type is enum
+    const enumProp = buildEnum(metadata)(type);
+    return mergeAll([enumProp, { property: recursed }, p, initProp, { isCollection }]);
+  });
+
+  return properties;
+}
+
+export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, prefix = '', parents = [], path = [],) : ProcessedEntityType => {
+  const navPropLens = lensProp<any>('navigationProperty');
+  const propertyLens = lensProp<any>('property');
+  const search = findType(metadata);
+  const entity = search(fullName);
 
   //parse navigations
   const navProps = emptyArray(entity?.navigationProperty)
@@ -112,7 +166,7 @@ export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, pre
       const newPath = append(n.name, path);
       const type = n.type.replace(collectionRegex, '$2');
       const navProp = search(type);
-      const property = emptyArray(navProp?.property).map(prop => mergeAll([prop, { pathName: `${newName}${prop.name}`, path: append(prop.name, newPath)}]) );
+      const property = buildProperty(metadata)(type, newName, append(fullName, parents), newPath)
       const isCollection = collectionRegex.test(n.type);
       //recurse here
       const transformed = buildTypeRoot(metadata)(type, newName, append(fullName, parents), newPath);
@@ -122,7 +176,7 @@ export const buildTypeRoot = (metadata: ODataMetadata) => (fullName: string, pre
 
   return mergeAll([ set(navPropLens, navProps, entity),
     {
-      property: emptyArray(entity?.property).map(prop => mergeAll([prop, { pathName: prop.name, path: [prop.name]}]) ),
+      property: buildProperty(metadata)(fullName, prefix, parents, parents),
       path: [],
     }, 
   ]);

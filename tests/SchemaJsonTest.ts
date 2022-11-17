@@ -1,4 +1,4 @@
-import { buildTypeRoot, flattenTypes } from '../index';
+import { buildProperty, buildTypeRoot, findAnyType, findEnumType, findType, flattenTypes } from '../index';
 
 //pulled from jaystack OData library
 //ensures compatibility
@@ -20,13 +20,49 @@ describe('Schema JSON Processing', () => {
         expect(flat[9].fullName).toBe('JayData.Test.CommonItems.Entities.TestItemType');
     })
 
+    it('should find the types based on type of type', () => {
+        const search = findAnyType(schema)
+        // first entity
+        expect(search(['entityType'])('JayData.Test.CommonItems.Entities.User')).not.toBeUndefined();
+        expect(search(['complexType'])('JayData.Test.CommonItems.Entities.User')).toBeUndefined();
+        expect(search(['enumType'])('JayData.Test.CommonItems.Entities.User')).toBeUndefined();
+        // next complex
+        expect(search(['entityType'])('JayData.Test.CommonItems.Entities.Location')).toBeUndefined();
+        expect(search(['complexType'])('JayData.Test.CommonItems.Entities.Location')).not.toBeUndefined();
+        expect(search(['enumType'])('JayData.Test.CommonItems.Entities.Location')).toBeUndefined();
+        // next enum
+        expect(search(['entityType'])('JayData.Test.CommonItems.Entities.UserType')).toBeUndefined();
+        expect(search(['complexType'])('JayData.Test.CommonItems.Entities.UserType')).toBeUndefined();
+        expect(search(['enumType'])('JayData.Test.CommonItems.Entities.UserType')).not.toBeUndefined();
+        // test helper methods
+        const searchFindType = findType(schema);
+        expect(searchFindType('JayData.Test.CommonItems.Entities.User')).not.toBeUndefined();
+        expect(searchFindType('JayData.Test.CommonItems.Entities.Location')).not.toBeUndefined();
+        expect(searchFindType('JayData.Test.CommonItems.Entities.UserType')).toBeUndefined();
+
+        const searchEnum = findEnumType(schema);
+        expect(searchEnum('JayData.Test.CommonItems.Entities.User')).toBeUndefined();
+        expect(searchEnum('JayData.Test.CommonItems.Entities.Location')).toBeUndefined();
+        expect(searchEnum('JayData.Test.CommonItems.Entities.UserType')).not.toBeUndefined();
+    })
+
     it('should process the tree from each root', () => {
         const root = buildTypeRoot(schema)('JayData.Test.CommonItems.Entities.User');
         expect(root.name).toBe('User');
         expect(root.path).toStrictEqual([]);
-        expect(root.property[0].name).toBe('Id');
-        expect(root.property[0].pathName).toBe('Id');
-        expect(root.property[0].path).toStrictEqual(['Id']);
+        const id = root.property[0];
+        expect(id.name).toBe('Id');
+        expect(id.pathName).toBe('Id');
+        expect(id.path).toStrictEqual(['Id']);
+        expect(id.property.length).toBe(0);
+        expect(id.member.length).toBe(0);
+        // enum prop
+        const userType = root.property[3];
+        expect(userType.name).toBe('UserType');
+        expect(userType.pathName).toBe('UserType');
+        expect(userType.path).toStrictEqual(['UserType']);
+        expect(userType.property.length).toBe(0);
+        expect(userType.member.length).toBe(3);
 
         var article = root.navigationProperty[0];
 
@@ -51,6 +87,9 @@ describe('Schema JSON Processing', () => {
         expect(profile.property.length).toBe(6);
         expect(profile.property[0].pathName).toBe('Profile.Id');
         expect(profile.property[0].path).toStrictEqual(['Profile', 'Id']);
+        // complex prop
+        const location = profile.property[5];
+        expect(location.property.length).toBe(4);
         //navprops
         expect(profile.navigationProperty.length).toBe(0);
     })

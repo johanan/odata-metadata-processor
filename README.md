@@ -61,7 +61,10 @@ Using our example above:
     path: [],
     property: [
         {
+        isCollection: false,
         name: 'CustomerID',
+        property: [],
+        member: [],
         type: 'Edm.String',
         pathName: 'CustomerID',
         path: ['CustomerID']
@@ -93,6 +96,10 @@ Now `Customers` has the full entity under the navigation property that matches t
 `buildTypeRoot` is a function that returns a function that takes the full name of the type. This allows you to *bind* the search function to a metadata. This can be passed around and used to build other types from the same metadata.
 
 In our example above you could bind the metadata and then build from `odata4.namespace.Orders` which would have `Customers` as a child.
+
+## Complex and Enum Types
+Properties can be a complex type; a type that has properties but is not an entity and a navigation, or an enum type; a set of values. 
+Each type will include any properties (for complex) or members (for enum) at the same level as the property. 
 
 ## findType
 `findType` is the helper method that does all the searching. In the same way `buildTypeRoot` binds the metadata, `findType` does the same. First pass in the metadata and you will get back a function to search for the fully qualified name in the metadata.
