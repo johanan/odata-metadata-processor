@@ -1,4 +1,4 @@
-import { append, compose, filter, find, flatten, has, includes, isNil, lensProp, map, mergeAll, mergeRight, prop, props, propEq, set, split } from 'ramda';
+import { append, compose, filter, find, flatten, has, includes, isNil, lensProp, map, mergeAll, mergeRight, prop, props, propEq, set, not } from 'ramda';
 
 export interface ProcessedProperty
 extends ODataProperty, ProcessedEntityType {
@@ -92,6 +92,7 @@ export const findAnyType = (metadata: ODataMetadata) => (typesToFind: string[]) 
 
   return compose(
     find(propEq('name', split.name)),
+    filter(compose(not, isNil)),
     flatten,
     map(props(typesToFind)),
     filter(propEq('namespace', split.namespace)),
